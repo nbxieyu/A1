@@ -7,7 +7,8 @@ void csv_to_record(char* filename, char* block_size){
 	FILE *fp;
 	char current_line[MAX_CHARS_PER_LINE];
 	char *line;
-	char *buffer = malloc(atoi(block_size));
+	int records_per_block = atoi(block_size) / sizeof(Record);
+	Record *buffer = (Record *) calloc (records_per_block, sizeof (Record));
 	int buffer_pointer = 0;
 	printf("%s\n", filename);
 	fp = fopen(filename, "r");
@@ -15,7 +16,7 @@ void csv_to_record(char* filename, char* block_size){
 		perror("Error opening file");
 		return;
 	}
-	int total_record = atoi(block_size) / sizeof(Record);
+	
 	int file = 0;
 	int i = 0;
 	//Parse the lines in csv file to an array of array chars
@@ -23,48 +24,46 @@ void csv_to_record(char* filename, char* block_size){
 		line [strcspn (line, "\r\n")] = '\0';
 		printf("%s\n", line);
 		char *attr = strtok(line, ",");
-		Record *record = malloc(sizeof(struct record));
+		//Record *record = malloc(sizeof(struct record));
 		int j = 0;
 		while(attr){
 
 			printf("current attr %s\n", attr);
 			if(j == 0){
-				record->uid1 = atoi(attr);
+				buffer[i].uid1 = atoi(attr);
 			}else{
-				record->uid2 = atoi(attr);
+				buffer[i].uid2 = atoi(attr);
 			}		
 			attr = strtok(NULL, ",");
 			j++;
 		}
-		if(i == total_record - 1){
-			write_buffer_to_disk(buffer, atoi(block_size), file, filename);
-			file++;
-			buffer_pointer = 0;
-
-		}else{
-			write_record_to_buffer(buffer, record, buffer_pointer);
-			buffer_pointer++;
-		}
 		i++;
+		if(i == records_per_block - 1){
+			write_buffer_to_disk(buffer, records_per_block, file, filename);
+			file++;
+			i = 0;
+
+		}
+		
 		
 
 	}
 
 	if(file == 0){
-		write_buffer_to_disk(buffer, atoi(block_size), file, filename);
+		write_buffer_to_disk(buffer, i*sizeof(Record), file, filename);
 	}
 	free(buffer);
 	fclose (fp);
 
 }
 
-void write_record_to_buffer(char* buffer, Record* record, int buffer_pointer){
-	memcpy(buffer + buffer_pointer*sizeof(Record), &record, sizeof(record));
-	free(record);
+// void write_record_to_buffer(Record* buffer, Record* record, int buffer_pointer){
+// 	memcpy(buffer[buffer_pointer], &record, sizeof(record));
+// 	free(record);
 
-}
+// }
 
-void write_buffer_to_disk(char* buffer, int buffer_size, int filenum, char* orginal_filename){
+void write_buffer_to_disk(Record* buffer, int total_records, int filenum, char* orginal_filename){
 	FILE *fp;
 	char fileName[100];
 	char fileNumber[sizeof(int) + 1];
@@ -77,7 +76,8 @@ void write_buffer_to_disk(char* buffer, int buffer_size, int filenum, char* orgi
 
 	fp = fopen(fileName, "wb");
 	if(fp){
-		fwrite(buffer, buffer_size, 1, fp);
+		fwrite(buffer, sizeof(Record), total_records, fp);
+		fflush (fp);
 	}else{
 		return;
 	}
@@ -85,6 +85,3 @@ void write_buffer_to_disk(char* buffer, int buffer_size, int filenum, char* orgi
 
 }
 
-int main(int argc, char *atgv[]){
-	csv_to_record(atgv[1], atgv[2]);
-}

@@ -2,17 +2,17 @@ CC = gcc
 CFLAGS = -O3 -Wall 
 CFLAGS += -D_LARGEFILE_SOURCE
 CFLAGS += -fno-exceptions
-CFLAGS += -finline-functions
 CFLAGS += -funroll-loops
 CFLAGS += -D_FILE_OFFSET_BITS=64
- 
-output: record.o
-	gcc record.o -o output
 
-record.o: record.c record.h
-	gcc -c record.c
+# Source files
+WRITE_BLOCKS_SRC=record.c write_blocks_seq.c write_lines.c read_blocks_seq.c
+# Binaries
+all:write_blocks_seq read_blocks_seq
 
-clean:
-	rm *.o output
-  
- 
+#sequential writing in blocks
+write_blocks_seq: $(WRITE_BLOCKS_SRC)
+	$(CC) $(CFLAGS) $^ -o $@ 
+
+clean:  
+	rm write_blocks_seq read_blocks_seq
